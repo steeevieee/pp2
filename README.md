@@ -1,6 +1,11 @@
 # scrape
 
+* It's driven by scrape.yml
+* It pulls most of the details from the API, but can't get episode details or a useful description
+* It pulls the programme details page for episode details and a useful description
+
 Here's a non-exhaustive list of things that need to be fixed, but I don't have the time to do it...
+* seems to sanitize all programme names into acceptable uris so far, but there may be more cases that need fixing
 * handle when the clocks change
 * pull more that description and episode number from the details page
 * allow parameters to be passed in
