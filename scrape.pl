@@ -3,7 +3,7 @@
 use YAML::XS 'LoadFile';
 use HTTP::Cache::Transparent;
 use HTML::TreeBuilder 5 -weak;
-use LWP::UserAgent;
+use LWP::UserAgent::Determined;
 use JSON::XS;
 use POSIX qw(strftime);
 use Date::Parse;
@@ -26,8 +26,9 @@ HTTP::Cache::Transparent::init( {
 } );
 
 # Create user agent
-my $browser = LWP::UserAgent->new;
+my $browser = LWP::UserAgent::Determined->new;
 $browser->agent('Mozilla/5.0');
+$browser->timing('10,30,90');
 
 # Get timezones for start and finish
 my $start_tz = strftime("%z", localtime);
