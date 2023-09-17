@@ -8,3 +8,4 @@ Here's a non-exhaustive list of things that need to be fixed, but I don't have t
 * handle a `configure` parameter so that the config file can be generated
 * make it all work inside the XMLTV framework
 * find out if the subtitle does exist somewhere, as I've not found it yet
+* better comments on the code
