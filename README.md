@@ -9,3 +9,4 @@ Here's a non-exhaustive list of things that need to be fixed, but I don't have t
 * make it all work inside the XMLTV framework
 * find out if the subtitle does exist somewhere, as I've not found it yet
 * better comments on the code
+* category mapping, as the ones that come back match my PVR anyway
