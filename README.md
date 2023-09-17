@@ -2,7 +2,9 @@
 
 * It's driven by scrape.yml
 * It pulls most of the details from the API, but can't get episode details or a useful description
-* It pulls the programme details page for episode details and a useful description
+* It pulls the programme details page for episode details and a useful description, but this makes it much slower
+  * Someone was asking them for the API swagger/spec, have they responded ?
+  * Does anyone have a way of getting the API to include these details ?
 
 Here's a non-exhaustive list of things that need to be fixed, but I don't have the time to do it...
 * seems to sanitize all programme names into acceptable uris so far, but there may be more cases that need fixing
