@@ -31,9 +31,6 @@ $browser->agent('Mozilla/5.0');
 $browser->timing('10,30,90');
 
 # Get timezones for start and finish
-my $start_tz = strftime("%z", localtime);
-my $end_tz = strftime("%z", localtime(time() + ($config->{days} * 86400)));
-
 # Set output to be unbuffered
 BEGIN{ $| = 1; }
 
@@ -91,8 +88,8 @@ sub get_listings {
                 my $epispode_string = '';
                 $encoded_title = sanitize_title_uri($program->{title});
                 $details_url = $HTML_URL . '/schedule/' . $program->{id} . '/' . $encoded_title . '/';
-                $start = strftime("%Y%m%d%H%M%S %z", localtime(str2time(substr($program->{start_at}, 0, 18))));
-                $end = strftime("%Y%m%d%H%M%S %z", localtime(str2time(substr($program->{end_at}, 0, 18))));
+                $start = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{start_at}, 0, 18))));
+                $end = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{end_at}, 0, 18))));
                 my $response = $browser->get($details_url);
                 die "Can't get $details_url -- ", $response->status_line
                     unless $response->is_success;
