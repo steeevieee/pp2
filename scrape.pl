@@ -21,7 +21,7 @@ my $config = LoadFile($CONFIG_FILE);
 # Set up cache
 HTTP::Cache::Transparent::init( {
 	BasePath => $config->{cachedir},
-	NoUpdate => 60 * 60,
+	NoUpdate => 60 * 60 * 24,
 	MaxAge => 24 * $config->{days},
 } );
 
@@ -30,7 +30,6 @@ my $browser = LWP::UserAgent::Determined->new;
 $browser->agent('Mozilla/5.0');
 $browser->timing('10,30,90');
 
-# Get timezones for start and finish
 # Set output to be unbuffered
 BEGIN{ $| = 1; }
 
@@ -50,7 +49,13 @@ my $data_blob = get_all_data();
 # Get the listings from th eblob for each channel
 my $channels = $config->{channels};
 for my $channel (@$channels) {
-    get_listings($channel->{id}, $channel->{guide})
+    if (defined($channel->{offset})) {
+        get_listings($channel->{id}, $channel->{guide}, $channel->{offset});
+    }
+    else
+    {
+        get_listings($channel->{id}, $channel->{guide}, 0);
+    }
 }
 
 # Print footer block
@@ -80,7 +85,8 @@ sub get_all_data {
 #       TODO: only grabbing summary/category/episode as that's all I need
 #       print out the details
 sub get_listings {
-	my ($channel_id, $guide_name) = @_;
+	my ($channel_id, $guide_name, $offset) = @_;
+    $offset = $offset * 3600;
     for my $item (@$data_blob) {
         if ($item->{id} eq $channel_id) {
             $schedules = $item->{schedules};
@@ -88,8 +94,8 @@ sub get_listings {
                 my $epispode_string = '';
                 $encoded_title = sanitize_title_uri($program->{title});
                 $details_url = $HTML_URL . '/schedule/' . $program->{id} . '/' . $encoded_title . '/';
-                $start = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{start_at}, 0, 18))));
-                $end = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{end_at}, 0, 18))));
+                $start = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{start_at}, 0, 18)) + $offset));
+                $end = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{end_at}, 0, 18)) + $offset));
                 my $response = $browser->get($details_url);
                 die "Can't get $details_url -- ", $response->status_line
                     unless $response->is_success;
@@ -119,6 +125,8 @@ sub get_listings {
 # Grabbed this from the project, but haven't found anything in the source that's part x/y so removed that bit
 sub make_ns_epnum {
 		my ($s, $e, $e_of) = @_;
+        $s-- if (defined $s && $s > 0);
+		$e-- if (defined $e && $e > 0);
 		my $episode_ns = '';
 		$episode_ns .= $s if defined $s;
 		$episode_ns .= '.';
