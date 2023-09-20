@@ -52,16 +52,15 @@ my $region_id = get_region_id($platform_id, $config->{region});
 # Get all the json schedule data for all channels for all days in one blob
 my $data_blob = get_all_data();
 
-# Get the listings from th eblob for each channel
+
+# Get the listings from the blob for each channel
 my $channels = $config->{channels};
 for my $channel (@$channels) {
-    if (defined($channel->{offset})) {
-        get_listings($channel->{id}, $channel->{guide}, $channel->{offset});
-    }
-    else
-    {
-        get_listings($channel->{id}, $channel->{guide}, 0);
-    }
+    my $offset = 0;
+    my $category = '';
+    if (defined($channel->{offset})) { $offset = $channel->{offset}; }
+    if (defined($channel->{category})) { $category = $channel->{category}; }
+    get_listings($channel->{id}, $channel->{guide}, $offset, $category);
 }
 
 # Print footer block
@@ -91,14 +90,16 @@ sub get_all_data {
 #       TODO: only grabbing summary/category/episode as that's all I need
 #       print out the details
 sub get_listings {
-	my ($channel_id, $guide_name, $offset) = @_;
+    my ($channel_id, $guide_name, $offset, $cat) = @_;
     $offset = $offset * 3600;
     for my $item (@$data_blob) {
         if ($item->{id} eq $channel_id) {
             $schedules = $item->{schedules};
             for my $program (@$schedules) {
                 my $epispode_string = '';
+                my $category = '';
                 $encoded_title = sanitize_title_uri($program->{title});
+                if ($encoded_title eq "tba") { next; }		
                 $details_url = $HTML_URL . '/schedule/' . $program->{id} . '/' . $encoded_title . '/';
                 $start = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{start_at}, 0, 18)) + $offset));
                 $end = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{end_at}, 0, 18)) + $offset));
@@ -107,9 +108,17 @@ sub get_listings {
                     unless $response->is_success;
                 my $tree = HTML::TreeBuilder->new;
                 $tree->parse($response->content);
-                my $summary = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p')->as_text;
-                my $category = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'div', 'class' => 'rounded-full bg-neutral-600 px-2')->as_text;
-                $category =~ s{/}{ / }g;
+                my $summary_entity = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p');
+                my $summary = $summary_entity ? $summary_entity->as_text : $program->{title};
+                if ($cat eq '')
+                {
+                        $category = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'div', 'class' => 'rounded-full bg-neutral-600 px-2')->as_text;
+                        $category =~ s{/}{ / }g;
+                }
+                else
+                {
+                        $category = $cat;
+                }
                 my $series_entity = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p', 'class' => 'my-4 text-sm');
                 my $series_string = $series_entity ? $series_entity->as_text : '';
                 if ($series_string ne '') {
