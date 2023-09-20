@@ -28,7 +28,13 @@ HTTP::Cache::Transparent::init( {
 # Create user agent
 my $browser = LWP::UserAgent::Determined->new;
 $browser->agent('Mozilla/5.0');
-$browser->timing('10,30,90');
+
+# Retry intervals
+$browser->timing('10,90,125');
+
+# Extra return code from CF
+$http_codes_hr = $browser->codes_to_determinate();
+$http_codes_hr->{524} = 1;
 
 # Set output to be unbuffered
 BEGIN{ $| = 1; }
