@@ -8,8 +8,8 @@ use JSON::XS;
 use POSIX qw(strftime);
 use Date::Parse;
 
-my $HTML_URL			= 'https://www.tvguide.co.uk';
-my $API_URL				= 'https://api.tvguide.co.uk';
+my $HTML_URL		= 'https://www.tvguide.co.uk';
+my $API_URL		= 'https://api.tvguide.co.uk';
 my $PLATFORM_URL        = $API_URL . '/platforms';
 my $REGION_URL          = $API_URL . '/regions';
 my $SCHEDULE_URL        = $API_URL . '/schedules';
@@ -21,18 +21,14 @@ my $config = LoadFile($CONFIG_FILE);
 # Set up cache
 HTTP::Cache::Transparent::init( {
 	BasePath => $config->{cachedir},
-	NoUpdate => 60 * 60 * 24,
+	NoUpdate => 60 * 60 * 24 * $config->{days},
 	MaxAge => 24 * $config->{days},
 } );
 
 # Create user agent
 my $browser = LWP::UserAgent::Determined->new;
 $browser->agent('Mozilla/5.0');
-
-# Retry intervals
-$browser->timing('10,90,125');
-
-# Extra return code from CF
+$browser->timing('5,10,90');
 $http_codes_hr = $browser->codes_to_determinate();
 $http_codes_hr->{524} = 1;
 
@@ -52,8 +48,7 @@ my $region_id = get_region_id($platform_id, $config->{region});
 # Get all the json schedule data for all channels for all days in one blob
 my $data_blob = get_all_data();
 
-
-# Get the listings from the blob for each channel
+# Get the listings from th eblob for each channel
 my $channels = $config->{channels};
 for my $channel (@$channels) {
     my $offset = 0;
@@ -90,16 +85,17 @@ sub get_all_data {
 #       TODO: only grabbing summary/category/episode as that's all I need
 #       print out the details
 sub get_listings {
-    my ($channel_id, $guide_name, $offset, $cat) = @_;
+	my ($channel_id, $guide_name, $offset, $cat) = @_;
     $offset = $offset * 3600;
     for my $item (@$data_blob) {
         if ($item->{id} eq $channel_id) {
             $schedules = $item->{schedules};
             for my $program (@$schedules) {
                 my $epispode_string = '';
-                my $category = '';
+		my $category = '';
                 $encoded_title = sanitize_title_uri($program->{title});
-                if ($encoded_title eq "tba") { next; }		
+		if ($encoded_title eq "tba") { next; }
+		if ($encoded_title eq "close") { next; }
                 $details_url = $HTML_URL . '/schedule/' . $program->{id} . '/' . $encoded_title . '/';
                 $start = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{start_at}, 0, 18)) + $offset));
                 $end = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{end_at}, 0, 18)) + $offset));
@@ -108,17 +104,18 @@ sub get_listings {
                     unless $response->is_success;
                 my $tree = HTML::TreeBuilder->new;
                 $tree->parse($response->content);
-                my $summary_entity = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p');
-                my $summary = $summary_entity ? $summary_entity->as_text : $program->{title};
-                if ($cat eq '')
-                {
+		my $summary_entity = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p');
+		my $summary = $summary_entity ? $summary_entity->as_text : $program->{title};
+#                my $summary = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p')->as_text || die "Failed on " . $details_url . "\n";
+		if ($cat eq '')
+		{
                         $category = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'div', 'class' => 'rounded-full bg-neutral-600 px-2')->as_text;
                         $category =~ s{/}{ / }g;
-                }
-                else
-                {
+		}
+		else
+		{	
                         $category = $cat;
-                }
+		}
                 my $series_entity = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p', 'class' => 'my-4 text-sm');
                 my $series_string = $series_entity ? $series_entity->as_text : '';
                 if ($series_string ne '') {
@@ -140,7 +137,7 @@ sub get_listings {
 # Grabbed this from the project, but haven't found anything in the source that's part x/y so removed that bit
 sub make_ns_epnum {
 		my ($s, $e, $e_of) = @_;
-        $s-- if (defined $s && $s > 0);
+	        $s-- if (defined $s && $s > 0);
 		$e-- if (defined $e && $e > 0);
 		my $episode_ns = '';
 		$episode_ns .= $s if defined $s;
