@@ -1,0 +1,20 @@
+#!/bin/bash
+
+#find /root/scrape/cache -type f -exec grep -L '<p class="my-4 text-sm"' {} \; > /tmp/clean
+FILES=$(cat /tmp/clean)
+PROGS=$(cat /root/scrape/clean.programmes | paste -sd'|' -)
+
+for f in $FILES
+do
+  find /root/scrape/cache -wholename $f -exec egrep -l "Url https://www.tvguide.co.uk/schedule/.*/(${PROGS})/" {} \;
+done
+
+#find /root/scrape/cache -type f -exec grep -Lq '<p class="my-4 text-sm"' {} \; -exec egrep -l "Url https://www.tvguide.co.uk/schedule/.*/(${PROGS})/" {} \; -delete > /dev/null 2>&1
+
+#for p in $PROGS
+#do
+#  for f in $FILES
+#  do
+#    find /root/scrape/cache -wholename $f -exec egrep -l "Url https://www.tvguide.co.uk/schedule/.*/(${PROGS})/" {} \;
+#  done
+#done

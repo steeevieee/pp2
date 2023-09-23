@@ -1,3 +1,4 @@
+#!/bin/bash
 
 # sudo apt install -y libyaml-perl libhttp-cache-transparent-perl libjson-xs-perl libdatetime-format-strptime-perl liblwp-useragent-determined-perl
 
@@ -12,9 +13,12 @@ find /root/scrape/cache -type f -size -20k -delete > /dev/null 2>&1
 echo "Removing TBA files" >> log
 find /root/scrape/cache -type f -exec egrep -l "Url https://www.tvguide.co.uk/schedule/.*/tba/" {} \; -delete > /dev/null 2>&1
 
-echo "Removing files without an episode where they should exist" >> log
+echo "Removing files without an episode" >> log
 PROGS=$(cat /root/scrape/clean.programmes | paste -sd'|' -)
 find /root/scrape/cache -type f -exec grep -Lq '<p class="my-4 text-sm"' {} \; -exec egrep -l "Url https://www.tvguide.co.uk/schedule/.*/(${PROGS})/" {} \; -delete > /dev/null 2>&1
+
+#echo "Removing files without an episode" >> log
+#find /root/scrape/cache -type f -exec grep -L '<p class="my-4 text-sm"' {} \; -delete > /dev/null 2>&1
 
 echo "Starting scraper" >> log
 perl scrape.pl > output.xml
