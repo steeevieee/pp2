@@ -85,13 +85,13 @@ sub get_all_data {
 #       TODO: only grabbing summary/category/episode as that's all I need
 #       print out the details
 sub get_listings {
-	my ($channel_id, $guide_name, $offset, $cat) = @_;
+    my ($channel_id, $guide_name, $offset, $cat) = @_;
     $offset = $offset * 3600;
     for my $item (@$data_blob) {
         if ($item->{id} eq $channel_id) {
             $schedules = $item->{schedules};
             for my $program (@$schedules) {
-                my $epispode_string = '';
+#                my $epispode_string = '';
 		my $category = '';
                 $encoded_title = sanitize_title_uri($program->{title});
 		if ($encoded_title eq "tba") { next; }
@@ -99,13 +99,17 @@ sub get_listings {
                 $details_url = $HTML_URL . '/schedule/' . $program->{id} . '/' . $encoded_title . '/';
                 $start = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{start_at}, 0, 18)) + $offset));
                 $end = strftime("%Y%m%d%H%M%S +0000", localtime(str2time(substr($program->{end_at}, 0, 18)) + $offset));
+		my $showsxx = $program->{meta}->{season} ? $program->{meta}->{season} : undef;
+                my $showexx = $program->{meta}->{episode} ? $program->{meta}->{episode} : undef;
+                my $showeof = $program->{meta}->{episode_total} ? $program->{meta}->{episode_total} : undef;
+		my $epispode_string = make_ns_epnum($showsxx, $showexx, $showeof);
                 my $response = $browser->get($details_url);
                 die "Can't get $details_url -- ", $response->status_line
                     unless $response->is_success;
                 my $tree = HTML::TreeBuilder->new;
                 $tree->parse($response->content);
 		my $summary_entity = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p');
-		my $summary = $summary_entity ? $summary_entity->as_text : $program->{title};
+		my $summary = $summary_entity ? $summary_entity->as_text : $program->{summary_short};
 #                my $summary = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p')->as_text || die "Failed on " . $details_url . "\n";
 		if ($cat eq '')
 		{
@@ -116,17 +120,17 @@ sub get_listings {
 		{	
                         $category = $cat;
 		}
-                my $series_entity = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p', 'class' => 'my-4 text-sm');
-                my $series_string = $series_entity ? $series_entity->as_text : '';
-                if ($series_string ne '') {
-                    my ($showsxx, $showexx, $showeof) = ( $series_string =~ /^(?:(?:Series|Season) (\d+)(?:[., :]+)?)?(?:Episode (\d+)(?: of (\d+))?)?/ );
-                    $epispode_string = make_ns_epnum($showsxx, $showexx, $showeof);
-                }
+#                my $series_entity = $tree->look_down('_tag' => 'div', 'class' => 'mx-auto max-w-prose p-4 text-white')->look_down('_tag' => 'p', 'class' => 'my-4 text-sm');
+#                my $series_string = $series_entity ? $series_entity->as_text : '';
+#                if ($series_string ne '') {
+#                    my ($showsxx, $showexx, $showeof) = ( $series_string =~ /^(?:(?:Series|Season) (\d+)(?:[., :]+)?)?(?:Episode (\d+)(?: of (\d+))?)?/ );
+#                    $epispode_string = make_ns_epnum($showsxx, $showexx, $showeof);
+#                }
                 print "  <programme start=\"" . $start . "\" channel=\"" . $guide_name . "\" stop=\"". $end . "\">\n";
                 print "    <title lang=\"en\">" . sanitize_string($program->{title}) . "</title>\n";
                 print "    <desc lang=\"en\">" . sanitize_string($summary) . "</desc>\n";
                 print "    <category>" . $category . "</category>\n";
-                if ($epispode_string ne '') { print "    <episode-num system=\"xmltv_ns\">" . $epispode_string . "</episode-num>\n"; }
+                if ($epispode_string ne '..') { print "    <episode-num system=\"xmltv_ns\">" . $epispode_string . "</episode-num>\n"; }
                 print "  </programme>\n";
                 $tree = $tree->delete;
             }
@@ -156,6 +160,7 @@ sub sanitize_title_uri {
     $tmp =~ s/\'//g;
     $tmp =~ s/\,//g;
     $tmp =~ s/\://g;
+    $tmp =~ s/\%//g;
     $tmp =~ s/\///g;
     return $tmp;         
 }
